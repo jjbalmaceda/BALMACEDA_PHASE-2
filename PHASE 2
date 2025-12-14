@@ -1,0 +1,328 @@
+#include <iostream>
+#include <cstdlib>
+#include <cmath>
+using namespace std;
+
+/* ==================================================
+   KEIGAN: REBORN
+ 
+   ================================================== */
+
+/* =========================
+   ANSI COLOR CODES (DESIGN)
+   ========================= */
+const string RESET  = "\033[0m";
+const string BOLD   = "\033[1m";
+const string RED    = "\033[31m";
+const string GREEN  = "\033[32m";
+const string YELLOW = "\033[33m";
+const string CYAN   = "\033[36m";
+
+/* =========================
+   GLOBAL CONSTANTS
+   ========================= */
+const int TRAINING_TURNS = 48;
+
+// Player starting stats
+const int PLAYER_HP_START = 50;
+const int PLAYER_EP_START = 5;
+
+// Stat identifiers
+const int STAT_HP       = 0;
+const int STAT_ATK      = 1;
+const int STAT_END      = 2;
+const int STAT_EP_POOL  = 3;
+const int STAT_EP_REGEN = 4;
+const int STAT_SELF     = 5;
+
+/* =========================
+   PLAYER STATE
+   ========================= */
+string playerName = "Keigan Lee";
+
+int playerHP, playerHPMax;
+int playerATK, playerEND;
+int playerEP, playerEPMax;
+double playerEPRegen;
+
+bool gate1Unlocked = false;
+bool gate2Unlocked = false;
+bool gateMastery   = false;
+
+// Special skills unlocked (max 8 via Self-Discovery)
+const int MAX_SKILLS = 8;
+string unlockedSkills[MAX_SKILLS];
+int skillCount = 0;
+
+int trainingHistory[TRAINING_TURNS];
+int currentTurn = 0;
+
+/* =========================
+   FUNCTION DECLARATIONS
+   ========================= */
+void showMainMenu();
+void sceneAct1();
+void initPlayer();
+void trainingLoop();
+void showTrainingDialogue(int turn);
+void applyTraining(int statType);
+void showPlayerStats();
+void showFinalStats();
+int  getInput(int min, int max);
+int  countPrevious(int statType);
+void battleShell();
+
+/* =========================
+   MAIN PROGRAM
+   ========================= */
+int main() {
+    showMainMenu();
+    sceneAct1();
+    initPlayer();
+
+    cout << "\n" << BOLD << CYAN << "===== TRAINING ARC =====" << RESET << "\n";
+    cout << "Keigan embarks on his 8-year training journey.\n";
+    cout << "Every decision shapes his growth and prepares him to face Arlong.\n";
+
+    trainingLoop();
+
+    cout << "\n" << BOLD << GREEN << "=== TRAINING COMPLETE ===" << RESET << "\n";
+    showFinalStats();
+
+    battleShell();
+    return 0;
+}
+
+/* =========================
+   MAIN MENU
+   ========================= */
+void showMainMenu() {
+    int choice;
+    cout << BOLD << CYAN << "=== KEIGAN: REBORN ===" << RESET << "\n";
+    cout << GREEN << "1. New Game" << RESET << endl;
+    cout << RED   << "2. Quit"     << RESET << endl;
+    cout << "Choose: ";
+    cin >> choice;
+    if (choice == 2) exit(0);
+}
+
+/* =========================
+   ACT 1 — STORY SCENE
+   ========================= */
+void sceneAct1() {
+    cout << "\n" << BOLD << RED << "=== ACT 1 — THE FALL OF COCOYASHI ===" << RESET << "\n\n";
+
+    cout << "Cocoyashi Village falls into despair when Arlong arrives.\n";
+    cout << "Bell-mere is executed for protecting her daughters.\n\n";
+
+    cout << "Keigan attacks Arlong — and is effortlessly crushed.\n";
+    cout << "Thrown into the sea, he is left for dead.\n\n";
+
+    cout << "But he survives. Washed ashore, broken yet alive,\n";
+    cout << "he swears to return strong enough to end Arlong's tyranny.\n\n";
+
+    cout << YELLOW << "(Press Enter to begin training...)" << RESET;
+    cin.ignore();
+    cin.get();
+}
+
+/* =========================
+   PLAYER INITIALIZATION
+   ========================= */
+void initPlayer() {
+    playerHP = playerHPMax = PLAYER_HP_START;
+    playerATK = 10;
+    playerEND = 15;
+    playerEP = playerEPMax = PLAYER_EP_START;
+    playerEPRegen = 0.0;
+
+    for (int i = 0; i < TRAINING_TURNS; i++)
+        trainingHistory[i] = -1;
+}
+
+/* =========================
+   TRAINING LOOP
+   ========================= */
+void trainingLoop() {
+    int choice;
+
+    for (currentTurn = 0; currentTurn < TRAINING_TURNS; currentTurn++) {
+        cout << YELLOW
+             << "\n----------------------------------------\n"
+             << " Training Period " << currentTurn + 1
+             << " / " << TRAINING_TURNS << "\n"
+             << "----------------------------------------\n"
+             << RESET;
+
+        showTrainingDialogue(currentTurn);
+        showPlayerStats();
+
+        cout << "\nChoose training focus:\n";
+        cout << "  1. HP\n";
+        cout << "  2. ATK\n";
+        cout << "  3. END\n";
+        cout << "  4. EP Pool\n";
+        cout << "  5. EP Regen\n";
+        cout << "  6. Self-Discovery\n";
+        cout << "Choice: ";
+
+        choice = getInput(1, 6) - 1;
+        trainingHistory[currentTurn] = choice;
+        applyTraining(choice);
+    }
+}
+
+/* =========================
+   TRAINING DIALOGUE
+   ========================= */
+void showTrainingDialogue(int turn) {
+    cout << GREEN << "Keigan: " << RESET;
+
+    switch (turn % 6) {
+        case 0: cout << "'I will grow stronger! I won't fail again.'\n"; break;
+        case 1: cout << "'Every day counts. I must push my limits.'\n"; break;
+        case 2: cout << "'I can feel my body getting stronger.'\n"; break;
+        case 3: cout << "'Nothing will stop me from defeating Arlong.'\n"; break;
+        case 4: cout << "'I must master these Gates, no matter what it takes.'\n"; break;
+        case 5: cout << "'I can do this... I have to do this.'\n"; break;
+    }
+}
+
+/* =========================
+   APPLY TRAINING LOGIC
+   ========================= */
+void applyTraining(int statType) {
+    int n = countPrevious(statType) + 1;
+
+    switch (statType) {
+        case STAT_HP: {
+            int gain = 21 + 4 * (n - 1);
+            playerHPMax += gain;
+            playerHP += gain;
+            cout << GREEN << "HP increased by +" << gain << RESET << endl;
+            break;
+        }
+        case STAT_ATK: {
+            int gain = 11 + 2 * (n - 1);
+            playerATK += gain;
+            cout << GREEN << "ATK increased by +" << gain << RESET << endl;
+            break;
+        }
+        case STAT_END: {
+            int gain = 15 + 3 * (n - 1);
+            playerEND += gain;
+            cout << GREEN << "END increased by +" << gain << RESET << endl;
+            break;
+        }
+        case STAT_EP_POOL: {
+            int gain = 15 + 3 * (n - 1);
+            playerEPMax += gain;
+            playerEP += gain;
+            cout << GREEN << "EP Max increased by +" << gain << RESET << endl;
+            break;
+        }
+        case STAT_EP_REGEN: {
+            double gain = 2.5 + 0.5 * (n - 1);
+            playerEPRegen += gain;
+            cout << GREEN << "EP Regen increased by +" << gain << RESET << endl;
+            break;
+        }
+        case STAT_SELF: {
+            if (skillCount >= MAX_SKILLS) {
+                cout << CYAN << "You feel no further techniques can be learned." << RESET << endl;
+                break;
+            }
+
+            const string SKILL_ORDER[MAX_SKILLS] = {
+                "Gate of Opening (G1)",
+                "Chain Handling",
+                "Kei-ga-n Barrage",
+                "Front Lotus (Omote Renge)",
+                "Gate of Opening – Mastery",
+                "Gate of Healing (G2)",
+                "Chain Barrage",
+                "Reverse Lotus (Ura Renge)"
+            };
+
+            unlockedSkills[skillCount] = SKILL_ORDER[skillCount];
+            cout << CYAN << "Self-Discovery unlocked: "
+                 << unlockedSkills[skillCount] << RESET << endl;
+
+            if (skillCount == 0) gate1Unlocked = true;
+            if (skillCount == 4) gateMastery = true;
+            if (skillCount == 5) gate2Unlocked = true;
+
+            skillCount++;
+            break;
+        }
+    }
+}
+
+/* =========================
+   HELPER FUNCTIONS
+   ========================= */
+int countPrevious(int statType) {
+    int count = 0;
+    for (int i = 0; i < currentTurn; i++)
+        if (trainingHistory[i] == statType) count++;
+    return count;
+}
+
+int getInput(int min, int max) {
+    int value;
+    while (true) {
+        cin >> value;
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(10000, '\n');
+            cout << RED << "Invalid input. Try again: " << RESET;
+            continue;
+        }
+        if (value < min || value > max) {
+            cout << RED << "Enter a number between " << min << " and " << max << ": " << RESET;
+            continue;
+        }
+        return value;
+    }
+}
+
+/* =========================
+   DISPLAY FUNCTIONS
+   ========================= */
+void showPlayerStats() {
+    cout << "\n[PLAYER: " << playerName << "]\n";
+    cout << "HP: " << playerHP << " / " << playerHPMax << endl;
+    cout << "ATK: " << playerATK << endl;
+    cout << "END: " << playerEND << endl;
+    cout << "EP: " << playerEP << " / " << playerEPMax << endl;
+    cout << "EP Regen: " << playerEPRegen << endl;
+
+    cout << "Gates: ";
+    if (!gate1Unlocked) cout << "None";
+    else if (gate1Unlocked && !gate2Unlocked) cout << "G1";
+    else cout << "G1, G2";
+    cout << endl;
+}
+
+void showFinalStats() {
+    cout << "\n==============================\n";
+    cout << "     FINAL TRAINING REPORT     \n";
+    cout << "==============================\n";
+
+    showPlayerStats();
+
+    cout << "\nLearned Skills:\n";
+    if (skillCount == 0) cout << "None\n";
+    else for (int i = 0; i < skillCount; i++) cout << "- " << unlockedSkills[i] << endl;
+
+    cout << "\nYears Trained: 8\n";
+    cout << "Training Turns: " << TRAINING_TURNS << endl;
+}
+
+/* =========================
+   PHASE 2 BATTLE PLACEHOLDER
+   ========================= */
+void battleShell() {
+    cout << "\n" << BOLD << RED << "[BATTLE SYSTEM COMING SOON]" << RESET << endl;
+    cout << "Arlong awaits...\n";
+}
